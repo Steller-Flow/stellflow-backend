@@ -1,13 +1,168 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  FREELANCER
+  CLIENT
+  ADMIN
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  FUNDED
+  IN_ESCROW
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum EscrowStatus {
+  PENDING
+  FUNDED
+  RELEASED
+  REFUNDED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum NotificationType {
+  PAYMENT
+  ESCROW
+  INVOICE
+  SYSTEM
+}
+
+model User {
+  id              String           @id @default(cuid())
+  fullname        String
+  email           String           @unique
+  password        String?
+  walletAddress   String?          @unique
+  profileImage    String?
+  country         String?
+  role            UserRole
+  isVerified      Boolean          @default(false)
+
+  invoicesCreated Invoice[]        @relation("InvoiceCreator")
+  invoicesReceived Invoice[]       @relation("InvoiceRecipient")
+
+  escrowsAsClient     Escrow[]     @relation("EscrowClient")
+  escrowsAsFreelancer Escrow[]     @relation("EscrowFreelancer")
+
+  payments         Payment[]
+  notifications    Notification[]
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model Invoice {
+  id                String          @id @default(cuid())
+
+  creatorId         String
+  recipientId       String
+
+  title             String
+  description       String
+  amount            Float
+  currency          String          @default("USDC")
+
+  status            InvoiceStatus   @default(DRAFT)
+
+  dueDate           DateTime?
+  paidAt            DateTime?
+
+  txHash            String?
+  contractId        String?
+
+  creator           User            @relation("InvoiceCreator", fields: [creatorId], references: [id])
+  recipient         User            @relation("InvoiceRecipient", fields: [recipientId], references: [id])
+
+  escrow            Escrow?
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Escrow {
+  id                String          @id @default(cuid())
+
+  invoiceId         String          @unique
+
+  clientId          String
+  freelancerId      String
+
+  contractId        String          @unique
+  txHash            String?
+
+  amount            Float
+  currency          String          @default("USDC")
+
+  status            EscrowStatus    @default(PENDING)
+
+  fundedAt          DateTime?
+  releasedAt        DateTime?
+  refundedAt        DateTime?
+
+  invoice           Invoice         @relation(fields: [invoiceId], references: [id])
+
+  client            User            @relation("EscrowClient", fields: [clientId], references: [id])
+
+  freelancer        User            @relation("EscrowFreelancer", fields: [freelancerId], references: [id])
+
+  payments          Payment[]
+
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Payment {
+  id                String          @id @default(cuid())
+
+  userId            String
+  escrowId          String?
+
+  amount            Float
+  currency          String          @default("USDC")
+
+  txHash            String          @unique
+
+  status            PaymentStatus   @default(PENDING)
+
+  description       String?
+
+  user              User            @relation(fields: [userId], references: [id])
+
+  escrow            Escrow?         @relation(fields: [escrowId], references: [id])
+
+  createdAt         DateTime        @default(now())
+}
+
+model Notification {
+  id                String            @id @default(cuid())
+
+  userId            String
+
+  title             String
+  message           String
+
+  type              NotificationType
+
+  isRead            Boolean           @default(false)
+
+  user              User              @relation(fields: [userId], references: [id])
+
+  createdAt         DateTime          @default(now())
 }
