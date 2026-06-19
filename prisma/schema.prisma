@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -66,6 +65,9 @@ model User {
 
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+
+  @@index([walletAddress])
+  @@index([role])
 }
 
 model Invoice {
@@ -76,7 +78,7 @@ model Invoice {
 
   title             String
   description       String
-  amount            Float
+  amount            Decimal         @db.Decimal(19, 4)
   currency          String          @default("USDC")
 
   status            InvoiceStatus   @default(DRAFT)
@@ -94,6 +96,11 @@ model Invoice {
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+
+  @@index([creatorId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Escrow {
@@ -107,7 +114,7 @@ model Escrow {
   contractId        String          @unique
   txHash            String?
 
-  amount            Float
+  amount            Decimal         @db.Decimal(19, 4)
   currency          String          @default("USDC")
 
   status            EscrowStatus    @default(PENDING)
@@ -126,6 +133,12 @@ model Escrow {
 
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+
+  @@index([clientId])
+  @@index([freelancerId])
+  @@index([status])
+  @@index([contractId])
+  @@index([createdAt])
 }
 
 model Payment {
@@ -134,7 +147,7 @@ model Payment {
   userId            String
   escrowId          String?
 
-  amount            Float
+  amount            Decimal         @db.Decimal(19, 4)
   currency          String          @default("USDC")
 
   txHash            String          @unique
@@ -148,6 +161,11 @@ model Payment {
   escrow            Escrow?         @relation(fields: [escrowId], references: [id])
 
   createdAt         DateTime        @default(now())
+
+  @@index([userId])
+  @@index([escrowId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model Notification {
@@ -165,4 +183,8 @@ model Notification {
   user              User              @relation(fields: [userId], references: [id])
 
   createdAt         DateTime          @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
 }
