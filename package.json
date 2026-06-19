@@ -1,17 +1,27 @@
 {
   "name": "stellflow-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "type": "module",
+  "description": "StellFlow Backend API - Express 5 + Prisma + PostgreSQL",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "~7.8.0",
-    "bcrypt": "~6.0.0",
     "bcryptjs": "~3.0.3",
     "cookie-parser": "~1.4.7",
     "cors": "~2.8.6",
@@ -31,10 +41,13 @@
     "@types/cors": "~2.8.19",
     "@types/express": "~5.0.6",
     "@types/jsonwebtoken": "~9.0.10",
+    "@types/morgan": "~1.9.9",
     "@types/node": "~25.8.0",
+    "eslint": "~9.18.0",
+    "@eslint/js": "~9.18.0",
     "prisma": "~7.8.0",
-    "ts-node-dev": "~2.0.0",
     "tsx": "~4.22.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "~3.2.0"
   }
 }
