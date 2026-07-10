@@ -5,7 +5,9 @@ export const config = {
   nodeEnv: process.env["NODE_ENV"] ?? "development",
   jwt: {
     secret: process.env["JWT_SECRET"] ?? "",
-    expiresIn: process.env["JWT_EXPIRES_IN"] ?? "7d",
+    expiresIn: 900,
+    refreshSecret: process.env["JWT_REFRESH_SECRET"] ?? "",
+    refreshExpiresIn: 604800,
   },
   stellar: {
     network: process.env["STELLAR_NETWORK"] ?? "testnet",
