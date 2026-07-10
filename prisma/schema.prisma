@@ -80,6 +80,7 @@ model Invoice {
   description       String
   amount            Decimal         @db.Decimal(19, 4)
   currency          String          @default("USDC")
+  lineItems         Json?           @default("[]")
 
   status            InvoiceStatus   @default(DRAFT)
 

@@ -4,6 +4,9 @@ import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import invoiceRoutes from "./routes/invoice.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 const PORT = process.env["PORT"] ?? 3001;
@@ -24,6 +27,11 @@ app.use("/api/", limiter);
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+app.use("/api/invoices", invoiceRoutes);
+app.use("/api/uploads", uploadRoutes);
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
   console.log(`StellFlow API running on port ${PORT}`);
