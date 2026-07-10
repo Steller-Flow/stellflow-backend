@@ -1,23 +1,23 @@
 import { Router } from "express";
+import { authenticate, authorize } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { createInvoiceSchema, updateInvoiceSchema, invoiceQuerySchema } from "../validators/invoice.schema.js";
 import {
   createInvoice,
   getInvoices,
-  getInvoice,
+  getInvoiceById,
   updateInvoice,
   deleteInvoice,
 } from "../controllers/invoice.controller.js";
-import { validate } from "../middleware/validate.js";
-import { authenticate } from "../middleware/auth.js";
-import { createInvoiceSchema, updateInvoiceSchema } from "../schemas/invoice.schema.js";
 
 const router = Router();
 
 router.use(authenticate);
 
-router.post("/", validate(createInvoiceSchema), createInvoice);
-router.get("/", getInvoices);
-router.get("/:id", getInvoice);
-router.put("/:id", validate(updateInvoiceSchema), updateInvoice);
-router.delete("/:id", deleteInvoice);
+router.post("/", authorize("FREELANCER"), validate(createInvoiceSchema), createInvoice);
+router.get("/", validate(invoiceQuerySchema, "query"), getInvoices);
+router.get("/:id", getInvoiceById);
+router.patch("/:id", authorize("FREELANCER"), validate(updateInvoiceSchema), updateInvoice);
+router.delete("/:id", authorize("FREELANCER"), deleteInvoice);
 
 export default router;

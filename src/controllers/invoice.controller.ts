@@ -7,6 +7,14 @@ import { getPaginationParams, getPaginationMeta, getSkipTake } from "../utils/pa
 const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   DRAFT: ["PENDING", "CANCELLED"],
   PENDING: ["FUNDED", "CANCELLED", "DISPUTED"],
+import type { Request, Response, NextFunction } from "express";
+import { prisma } from "../config/prisma.js";
+import { NotFoundError, ForbiddenError, ConflictError } from "../utils/AppError.js";
+import type { CreateInvoiceInput, UpdateInvoiceInput, InvoiceQueryInput } from "../validators/invoice.schema.js";
+
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ["PENDING", "CANCELLED"],
+  PENDING: ["FUNDED", "CANCELLED"],
   FUNDED: ["IN_ESCROW"],
   IN_ESCROW: ["COMPLETED", "DISPUTED"],
   COMPLETED: [],
