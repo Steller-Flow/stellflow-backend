@@ -36,7 +36,7 @@ export async function uploadAvatar(req: Request, res: Response, next: NextFuncti
 
     await prisma.user.update({
       where: { id: userId },
-      data: { profileImage: urls[1] },
+      data: { profileImage: urls[1] ?? null },
     });
 
     res.json({
@@ -66,7 +66,7 @@ export async function uploadInvoiceAttachment(req: Request, res: Response, next:
       throw new ValidationError({ file: ["File too large. Maximum size: 10MB"] });
     }
 
-    const { invoiceId } = req.params;
+    const invoiceId = req.params["invoiceId"] as string;
     const userId = req.user!.userId;
 
     const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });

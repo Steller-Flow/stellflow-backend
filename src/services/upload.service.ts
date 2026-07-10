@@ -19,15 +19,20 @@ const AVATAR_SIZES = {
   medium: { width: 256, height: 256 },
 };
 
-const s3Client = new S3Client({
+const s3Config: Record<string, unknown> = {
   region: config.s3.region,
-  endpoint: config.s3.endpoint,
   forcePathStyle: config.s3.forcePathStyle,
   credentials: {
     accessKeyId: config.s3.accessKeyId,
     secretAccessKey: config.s3.secretAccessKey,
   },
-});
+};
+
+if (config.s3.endpoint) {
+  s3Config.endpoint = config.s3.endpoint;
+}
+
+const s3Client = new S3Client(s3Config);
 
 export function validateFileType(mimetype: string): boolean {
   return ALLOWED_MIME_TYPES.includes(mimetype);

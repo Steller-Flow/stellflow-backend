@@ -25,8 +25,12 @@ export function authenticate(req: Request, _res: Response, next: NextFunction): 
   }
 
   const token = authHeader.split(" ")[1];
+  if (!token) {
+    next(new UnauthorizedError("Missing token"));
+    return;
+  }
   try {
-    const decoded = jwt.verify(token, config.jwt.secret) as AuthPayload;
+    const decoded = jwt.verify(token, config.jwt.secret) as unknown as AuthPayload;
     req.user = decoded;
     next();
   } catch {

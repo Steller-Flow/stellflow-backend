@@ -103,7 +103,7 @@ export async function getInvoices(req: Request, res: Response, next: NextFunctio
 
 export async function getInvoiceById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     const userId = req.user!.userId;
 
     const invoice = await prisma.invoice.findUnique({
@@ -131,7 +131,7 @@ export async function getInvoiceById(req: Request, res: Response, next: NextFunc
 
 export async function updateInvoice(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     const userId = req.user!.userId;
     const data = req.body as UpdateInvoiceInput;
 
@@ -176,7 +176,7 @@ export async function updateInvoice(req: Request, res: Response, next: NextFunct
 
 export async function deleteInvoice(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     const userId = req.user!.userId;
 
     const invoice = await prisma.invoice.findUnique({ where: { id } });
