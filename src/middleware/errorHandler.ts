@@ -21,9 +21,9 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     return;
   }
 
-  console.error("Unexpected error:", err);
+  console.error("Unhandled error:", err);
   res.status(500).json({
     success: false,
-    error: { message: "Internal server error" },
+    error: "Internal server error",
   });
 }
