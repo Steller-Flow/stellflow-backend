@@ -3,8 +3,9 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/prisma.js";
 import { config } from "../config/index.js";
-import { ConflictError, UnauthorizedError, NotFoundError } from "../utils/errors.js";
+import { ConflictError, UnauthorizedError, NotFoundError } from "../utils/AppError.js";
 import type { AuthRequest } from "../middleware/auth.js";
+import { logAuditFromRequest } from "../services/audit.service.js";
 
 function generateTokens(payload: { userId: string; email: string; role: string }) {
   const accessToken = jwt.sign(payload, config.jwt.secret, {
@@ -72,6 +73,15 @@ export async function register(req: Request, res: Response): Promise<void> {
 
   setRefreshTokenCookie(res, tokens.refreshToken);
 
+  await logAuditFromRequest(req, {
+    userId: user.id,
+    action: "USER_REGISTERED",
+    resource: "User",
+    resourceId: user.id,
+    description: `New user registered: ${user.email} (${user.role})`,
+    metadata: { email: user.email, role: user.role },
+  });
+
   res.status(201).json({
     success: true,
     data: {
@@ -102,6 +112,15 @@ export async function login(req: Request, res: Response): Promise<void> {
   });
 
   setRefreshTokenCookie(res, tokens.refreshToken);
+
+  await logAuditFromRequest(req, {
+    userId: user.id,
+    action: "USER_LOGIN",
+    resource: "User",
+    resourceId: user.id,
+    description: `User logged in: ${user.email}`,
+    metadata: { email: user.email },
+  });
 
   res.json({
     success: true,
@@ -151,7 +170,7 @@ export async function refreshToken(req: Request, res: Response): Promise<void> {
 
   const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
   if (!user) {
-    throw new NotFoundError("User not found");
+    throw new NotFoundError("User");
   }
 
   const tokens = generateTokens({
@@ -190,7 +209,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
   });
 
   if (!user) {
-    throw new NotFoundError("User not found");
+    throw new NotFoundError("User");
   }
 
   res.json({
