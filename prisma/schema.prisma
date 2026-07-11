@@ -37,10 +37,10 @@ enum PaymentStatus {
 }
 
 enum NotificationType {
-  PAYMENT
-  ESCROW
-  INVOICE
-  SYSTEM
+  PAYMENT_RECEIVED
+  ESCROW_FUNDED
+  INVOICE_SENT
+  ESCROW_RELEASED
 }
 
 model User {
