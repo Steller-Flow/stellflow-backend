@@ -5,7 +5,7 @@ import { createInvoiceSchema, updateInvoiceSchema, invoiceQuerySchema } from "..
 import {
   createInvoice,
   getInvoices,
-  getInvoiceById,
+  getInvoice,
   updateInvoice,
   deleteInvoice,
 } from "../controllers/invoice.controller.js";
