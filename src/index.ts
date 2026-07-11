@@ -14,6 +14,8 @@ import escrowRoutes from "./routes/escrow.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import walletRoutes from "./routes/wallet.routes.js";
+import auditRoutes from "./routes/audit.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { globalLimiter, apiLimiter } from "./middleware/rateLimiter.js";
 import { sanitizeBody, sanitizeQuery, sanitizeParams, validateContentType } from "./middleware/sanitize.js";
@@ -57,6 +59,8 @@ app.use("/api/escrows", apiLimiter, escrowRoutes);
 app.use("/api/payments", apiLimiter, paymentRoutes);
 app.use("/api/notifications", apiLimiter, notificationRoutes);
 app.use("/api/analytics", apiLimiter, analyticsRoutes);
+app.use("/api/wallet", apiLimiter, walletRoutes);
+app.use("/api/audit-logs", apiLimiter, auditRoutes);
 
 app.use(errorHandler);
 

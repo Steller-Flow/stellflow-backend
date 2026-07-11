@@ -6,6 +6,7 @@ import { getPaginationParams, getPaginationMeta, getSkipTake } from "../utils/pa
 import * as stellarService from "../services/stellar.service.js";
 import { getIO } from "../services/socket.service.js";
 import type { CreatePaymentInput, PaymentWebhookInput } from "../validators/payment.schema.js";
+import { logAuditFromRequest } from "../services/audit.service.js";
 
 export async function createPayment(req: Request, res: Response): Promise<void> {
   const authReq = req as AuthRequest;
@@ -44,6 +45,15 @@ export async function createPayment(req: Request, res: Response): Promise<void> 
         select: { id: true, status: true, amount: true },
       },
     },
+  });
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "PAYMENT_CREATED",
+    resource: "Payment",
+    resourceId: payment.id,
+    description: `Payment created: ${amount} ${currency ?? "USDC"}, txHash: ${txHash}`,
+    metadata: { amount, currency: currency ?? "USDC", txHash, escrowId: escrowId ?? "" },
   });
 
   res.status(201).json({
@@ -132,6 +142,7 @@ export async function getPaymentById(req: Request, res: Response): Promise<void>
 }
 
 export async function verifyPayment(req: Request, res: Response): Promise<void> {
+  const authReq = req as AuthRequest;
   const { txHash } = req.body;
 
   const payment = await prisma.payment.findUnique({ where: { txHash } });
@@ -162,6 +173,15 @@ export async function verifyPayment(req: Request, res: Response): Promise<void> 
         select: { id: true, status: true, amount: true },
       },
     },
+  });
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: verification.success ? "PAYMENT_VERIFIED" : "PAYMENT_FAILED",
+    resource: "Payment",
+    resourceId: payment.id,
+    description: `Payment ${verification.success ? "verified" : "failed"}: txHash ${txHash}`,
+    metadata: { txHash, status: verification.success ? "SUCCESS" : "FAILED" },
   });
 
   if (verification.success) {
@@ -212,6 +232,15 @@ export async function handlePaymentWebhook(req: Request, res: Response): Promise
         select: { id: true, fullname: true, email: true },
       },
     },
+  });
+
+  await logAuditFromRequest(req, {
+    userId: payment.userId,
+    action: status === "CONFIRMED" ? "PAYMENT_VERIFIED" : "PAYMENT_FAILED",
+    resource: "Payment",
+    resourceId: payment.id,
+    description: `Payment webhook: status=${status}, confirmations=${confirmations ?? "N/A"}, ledger=${ledger ?? "N/A"}`,
+    metadata: { txHash, status, confirmations: confirmations ?? 0, ledger: ledger ?? 0 },
   });
 
   const io = getIO();

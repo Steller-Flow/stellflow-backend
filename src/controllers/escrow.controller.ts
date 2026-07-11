@@ -4,6 +4,7 @@ import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/AppErro
 import type { AuthRequest } from "../middleware/auth.js";
 import * as stellarService from "../services/stellar.service.js";
 import { broadcastToUser, broadcastToEscrow } from "../services/socket.service.js";
+import { logAuditFromRequest } from "../services/audit.service.js";
 
 const VALID_ESCROW_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["FUNDED", "REFUNDED"],
@@ -76,6 +77,15 @@ export async function createEscrow(req: Request, res: Response): Promise<void> {
   await prisma.invoice.update({
     where: { id: invoiceId },
     data: { status: "IN_ESCROW", contractId: escrow.contractId },
+  });
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "ESCROW_CREATED",
+    resource: "Escrow",
+    resourceId: escrow.id,
+    description: `Escrow created for invoice ${invoiceId} with amount ${invoice.amount} ${invoice.currency}`,
+    metadata: { invoiceId, amount: invoice.amount.toString(), currency: invoice.currency },
   });
 
   broadcastToUser(invoice.creatorId, "escrow:created", {
@@ -156,6 +166,15 @@ export async function fundEscrow(req: Request, res: Response): Promise<void> {
   await prisma.invoice.update({
     where: { id: escrow.invoiceId },
     data: { status: "FUNDED", txHash },
+  });
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "ESCROW_FUNDED",
+    resource: "Escrow",
+    resourceId: id,
+    description: `Escrow funded with ${escrow.amount} ${escrow.currency}, txHash: ${txHash}`,
+    metadata: { amount: escrow.amount.toString(), currency: escrow.currency, txHash },
   });
 
   broadcastToEscrow(id, "escrow:stateChange", {
@@ -240,6 +259,15 @@ export async function releaseEscrow(req: Request, res: Response): Promise<void> 
     data: { status: "COMPLETED", paidAt: new Date(), txHash },
   });
 
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "ESCROW_RELEASED",
+    resource: "Escrow",
+    resourceId: id,
+    description: `Escrow funds released: ${escrow.amount} ${escrow.currency} to freelancer, txHash: ${txHash}`,
+    metadata: { amount: escrow.amount.toString(), currency: escrow.currency, txHash, freelancerId: escrow.freelancerId },
+  });
+
   broadcastToEscrow(id, "escrow:stateChange", {
     escrowId: id,
     status: "RELEASED",
@@ -318,6 +346,15 @@ export async function refundEscrow(req: Request, res: Response): Promise<void> {
   await prisma.invoice.update({
     where: { id: escrow.invoiceId },
     data: { status: "CANCELLED", txHash },
+  });
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "ESCROW_REFUNDED",
+    resource: "Escrow",
+    resourceId: id,
+    description: `Escrow refunded: ${escrow.amount} ${escrow.currency} to client, txHash: ${txHash}`,
+    metadata: { amount: escrow.amount.toString(), currency: escrow.currency, txHash, clientId: escrow.clientId },
   });
 
   broadcastToEscrow(id, "escrow:stateChange", {

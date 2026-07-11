@@ -4,6 +4,7 @@ import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/AppErro
 import type { AuthRequest } from "../middleware/auth.js";
 import { getPaginationParams, getPaginationMeta, getSkipTake } from "../utils/pagination.js";
 import { broadcastToUser } from "../services/socket.service.js";
+import { logAuditFromRequest } from "../services/audit.service.js";
 
 const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
   DRAFT: ["PENDING", "CANCELLED"],
@@ -51,6 +52,15 @@ export async function createInvoice(req: Request, res: Response): Promise<void> 
         select: { id: true, fullname: true, email: true },
       },
     },
+  });
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "INVOICE_CREATED",
+    resource: "Invoice",
+    resourceId: invoice.id,
+    description: `Invoice created: ${title} for ${amount} ${currency ?? "USDC"}`,
+    metadata: { title, amount, currency, recipientId },
   });
 
   broadcastToUser(recipientId, "invoice:sent", {
@@ -200,10 +210,28 @@ export async function updateInvoice(req: Request, res: Response): Promise<void> 
   });
 
   if (status && status !== invoice.status) {
+    await logAuditFromRequest(req, {
+      userId: authReq.user.userId,
+      action: "INVOICE_STATUS_CHANGED",
+      resource: "Invoice",
+      resourceId: id,
+      description: `Invoice status changed: ${invoice.status} -> ${status}`,
+      metadata: { oldStatus: invoice.status, newStatus: status },
+    });
+
     broadcastToUser(invoice.recipientId, "invoice:statusUpdate", {
       invoiceId: id,
       oldStatus: invoice.status,
       newStatus: status,
+    });
+  } else {
+    await logAuditFromRequest(req, {
+      userId: authReq.user.userId,
+      action: "INVOICE_UPDATED",
+      resource: "Invoice",
+      resourceId: id,
+      description: `Invoice updated`,
+      metadata: { fields: Object.keys(req.body).filter((k) => req.body[k] !== undefined).join(",") },
     });
   }
 
@@ -229,6 +257,15 @@ export async function deleteInvoice(req: Request, res: Response): Promise<void> 
   if (invoice.status !== "DRAFT") {
     throw new BadRequestError("Only draft invoices can be deleted");
   }
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "INVOICE_DELETED",
+    resource: "Invoice",
+    resourceId: id,
+    description: `Invoice deleted: ${invoice.title}`,
+    metadata: { title: invoice.title, amount: invoice.amount.toString() },
+  });
 
   await prisma.invoice.delete({ where: { id } });
 
