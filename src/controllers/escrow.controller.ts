@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
-import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/errors.js";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/AppError.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import * as stellarService from "../services/stellar.service.js";
+import { broadcastToUser, broadcastToEscrow } from "../services/socket.service.js";
 
 const VALID_ESCROW_TRANSITIONS: Record<string, string[]> = {
   PENDING: ["FUNDED", "REFUNDED"],
@@ -23,7 +24,7 @@ export async function createEscrow(req: Request, res: Response): Promise<void> {
 
   const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
   if (!invoice) {
-    throw new NotFoundError("Invoice not found");
+    throw new NotFoundError("Invoice");
   }
 
   if (invoice.recipientId !== authReq.user.userId && authReq.user.role !== "ADMIN") {
@@ -77,6 +78,13 @@ export async function createEscrow(req: Request, res: Response): Promise<void> {
     data: { status: "IN_ESCROW", contractId: escrow.contractId },
   });
 
+  broadcastToUser(invoice.creatorId, "escrow:created", {
+    escrowId: escrow.id,
+    invoiceId,
+    amount: escrow.amount.toString(),
+    currency: escrow.currency,
+  });
+
   res.status(201).json({
     success: true,
     data: { escrow },
@@ -90,7 +98,7 @@ export async function fundEscrow(req: Request, res: Response): Promise<void> {
 
   const escrow = await prisma.escrow.findUnique({ where: { id } });
   if (!escrow) {
-    throw new NotFoundError("Escrow not found");
+    throw new NotFoundError("Escrow");
   }
 
   if (escrow.clientId !== authReq.user.userId && authReq.user.role !== "ADMIN") {
@@ -150,6 +158,18 @@ export async function fundEscrow(req: Request, res: Response): Promise<void> {
     data: { status: "FUNDED", txHash },
   });
 
+  broadcastToEscrow(id, "escrow:stateChange", {
+    escrowId: id,
+    status: "FUNDED",
+    txHash,
+  });
+  broadcastToUser(escrow.freelancerId, "escrow:funded", {
+    escrowId: id,
+    amount: escrow.amount.toString(),
+    currency: escrow.currency,
+    txHash,
+  });
+
   res.json({
     success: true,
     data: { escrow: updatedEscrow },
@@ -163,7 +183,7 @@ export async function releaseEscrow(req: Request, res: Response): Promise<void> 
 
   const escrow = await prisma.escrow.findUnique({ where: { id } });
   if (!escrow) {
-    throw new NotFoundError("Escrow not found");
+    throw new NotFoundError("Escrow");
   }
 
   if (authReq.user.role !== "ADMIN") {
@@ -220,6 +240,18 @@ export async function releaseEscrow(req: Request, res: Response): Promise<void> 
     data: { status: "COMPLETED", paidAt: new Date(), txHash },
   });
 
+  broadcastToEscrow(id, "escrow:stateChange", {
+    escrowId: id,
+    status: "RELEASED",
+    txHash,
+  });
+  broadcastToUser(escrow.clientId, "escrow:released", {
+    escrowId: id,
+    amount: escrow.amount.toString(),
+    currency: escrow.currency,
+    txHash,
+  });
+
   res.json({
     success: true,
     data: { escrow: updatedEscrow },
@@ -233,7 +265,7 @@ export async function refundEscrow(req: Request, res: Response): Promise<void> {
 
   const escrow = await prisma.escrow.findUnique({ where: { id } });
   if (!escrow) {
-    throw new NotFoundError("Escrow not found");
+    throw new NotFoundError("Escrow");
   }
 
   if (authReq.user.role !== "ADMIN") {
@@ -288,6 +320,18 @@ export async function refundEscrow(req: Request, res: Response): Promise<void> {
     data: { status: "CANCELLED", txHash },
   });
 
+  broadcastToEscrow(id, "escrow:stateChange", {
+    escrowId: id,
+    status: "REFUNDED",
+    txHash,
+  });
+  broadcastToUser(escrow.freelancerId, "escrow:refunded", {
+    escrowId: id,
+    amount: escrow.amount.toString(),
+    currency: escrow.currency,
+    txHash,
+  });
+
   res.json({
     success: true,
     data: { escrow: updatedEscrow },
@@ -318,7 +362,7 @@ export async function getEscrow(req: Request, res: Response): Promise<void> {
   });
 
   if (!escrow) {
-    throw new NotFoundError("Escrow not found");
+    throw new NotFoundError("Escrow");
   }
 
   if (
