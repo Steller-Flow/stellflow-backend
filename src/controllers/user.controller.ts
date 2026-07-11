@@ -1,7 +1,8 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
-import { NotFoundError, ForbiddenError } from "../utils/errors.js";
+import { NotFoundError, ForbiddenError } from "../utils/AppError.js";
 import type { AuthRequest } from "../middleware/auth.js";
+import { logAuditFromRequest } from "../services/audit.service.js";
 
 function calculateProfileCompleteness(user: {
   fullname: string;
@@ -34,7 +35,7 @@ export async function getProfile(req: Request, res: Response): Promise<void> {
   });
 
   if (!user) {
-    throw new NotFoundError("User not found");
+    throw new NotFoundError("User");
   }
 
   const completeness = calculateProfileCompleteness(user);
@@ -101,6 +102,22 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
 
   const completeness = calculateProfileCompleteness(user);
 
+  const changedFields: string[] = [];
+  if (fullname) changedFields.push("fullname");
+  if (email) changedFields.push("email");
+  if (country) changedFields.push("country");
+  if (walletAddress) changedFields.push("walletAddress");
+  if (profileImage) changedFields.push("profileImage");
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "ACCOUNT_UPDATED",
+    resource: "User",
+    resourceId: authReq.user.userId,
+    description: `Profile updated: ${changedFields.join(", ")}`,
+    metadata: { changedFields },
+  });
+
   res.json({
     success: true,
     data: {
@@ -115,8 +132,17 @@ export async function deleteProfile(req: Request, res: Response): Promise<void> 
 
   const user = await prisma.user.findUnique({ where: { id: authReq.user.userId } });
   if (!user) {
-    throw new NotFoundError("User not found");
+    throw new NotFoundError("User");
   }
+
+  await logAuditFromRequest(req, {
+    userId: authReq.user.userId,
+    action: "ACCOUNT_DELETED",
+    resource: "User",
+    resourceId: authReq.user.userId,
+    description: `Account deleted: ${user.email}`,
+    metadata: { email: user.email },
+  });
 
   await prisma.user.delete({ where: { id: authReq.user.userId } });
 
