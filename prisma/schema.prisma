@@ -62,6 +62,7 @@ model User {
 
   payments         Payment[]
   notifications    Notification[]
+  auditLogs        AuditLog[]
 
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -187,5 +188,51 @@ model Notification {
 
   @@index([userId])
   @@index([isRead])
+  @@index([createdAt])
+}
+
+enum AuditAction {
+  PAYMENT_CREATED
+  PAYMENT_VERIFIED
+  PAYMENT_FAILED
+  ESCROW_CREATED
+  ESCROW_FUNDED
+  ESCROW_RELEASED
+  ESCROW_REFUNDED
+  INVOICE_CREATED
+  INVOICE_UPDATED
+  INVOICE_DELETED
+  INVOICE_STATUS_CHANGED
+  ACCOUNT_UPDATED
+  ACCOUNT_DELETED
+  WALLET_LINKED
+  WALLET_UNLINKED
+  WALLET_VERIFIED
+  USER_REGISTERED
+  USER_LOGIN
+  USER_LOGOUT
+}
+
+model AuditLog {
+  id              String        @id @default(cuid())
+
+  userId          String?
+  action          AuditAction
+  resource        String?
+  resourceId      String?
+  description     String
+
+  ipAddress       String?
+  userAgent       String?
+
+  metadata        Json?
+
+  user            User?         @relation(fields: [userId], references: [id])
+
+  createdAt       DateTime      @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
   @@index([createdAt])
 }
