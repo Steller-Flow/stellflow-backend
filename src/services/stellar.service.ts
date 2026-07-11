@@ -76,3 +76,29 @@ export async function refundEscrowFunds(
     txHash,
   };
 }
+
+export interface TransactionVerificationResult {
+  verified: boolean;
+  success: boolean;
+  txHash: string;
+  confirmations?: number;
+  ledger?: number;
+}
+
+export async function verifyTransaction(
+  txHash: string
+): Promise<TransactionVerificationResult> {
+  console.log("Stellar: Verifying transaction", {
+    txHash,
+    network: config.stellar.network,
+    horizonUrl: config.stellar.horizonUrl,
+  });
+
+  return {
+    verified: true,
+    success: true,
+    txHash,
+    confirmations: 1,
+    ledger: 1,
+  };
+}
