@@ -9,6 +9,10 @@ export interface AuthPayload {
   role: string;
 }
 
+export interface AuthRequest extends Request {
+  user: AuthPayload;
+}
+
 declare global {
   namespace Express {
     interface Request {
