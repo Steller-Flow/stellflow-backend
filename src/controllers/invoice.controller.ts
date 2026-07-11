@@ -1,18 +1,11 @@
 import type { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
-import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/errors.js";
+import { NotFoundError, ForbiddenError, BadRequestError } from "../utils/AppError.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { getPaginationParams, getPaginationMeta, getSkipTake } from "../utils/pagination.js";
+import { broadcastToUser } from "../services/socket.service.js";
 
 const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ["PENDING", "CANCELLED"],
-  PENDING: ["FUNDED", "CANCELLED", "DISPUTED"],
-import type { Request, Response, NextFunction } from "express";
-import { prisma } from "../config/prisma.js";
-import { NotFoundError, ForbiddenError, ConflictError } from "../utils/AppError.js";
-import type { CreateInvoiceInput, UpdateInvoiceInput, InvoiceQueryInput } from "../validators/invoice.schema.js";
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
   DRAFT: ["PENDING", "CANCELLED"],
   PENDING: ["FUNDED", "CANCELLED"],
   FUNDED: ["IN_ESCROW"],
@@ -33,7 +26,7 @@ export async function createInvoice(req: Request, res: Response): Promise<void> 
 
   const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
   if (!recipient) {
-    throw new NotFoundError("Recipient not found");
+    throw new NotFoundError("Recipient");
   }
 
   if (recipientId === authReq.user.userId) {
@@ -58,6 +51,13 @@ export async function createInvoice(req: Request, res: Response): Promise<void> 
         select: { id: true, fullname: true, email: true },
       },
     },
+  });
+
+  broadcastToUser(recipientId, "invoice:sent", {
+    invoiceId: invoice.id,
+    title: invoice.title,
+    amount: invoice.amount.toString(),
+    currency: invoice.currency,
   });
 
   res.status(201).json({
@@ -143,7 +143,7 @@ export async function getInvoice(req: Request, res: Response): Promise<void> {
   });
 
   if (!invoice) {
-    throw new NotFoundError("Invoice not found");
+    throw new NotFoundError("Invoice");
   }
 
   if (invoice.creatorId !== authReq.user.userId && invoice.recipientId !== authReq.user.userId) {
@@ -163,7 +163,7 @@ export async function updateInvoice(req: Request, res: Response): Promise<void> 
 
   const invoice = await prisma.invoice.findUnique({ where: { id } });
   if (!invoice) {
-    throw new NotFoundError("Invoice not found");
+    throw new NotFoundError("Invoice");
   }
 
   if (invoice.creatorId !== authReq.user.userId) {
@@ -199,6 +199,14 @@ export async function updateInvoice(req: Request, res: Response): Promise<void> 
     },
   });
 
+  if (status && status !== invoice.status) {
+    broadcastToUser(invoice.recipientId, "invoice:statusUpdate", {
+      invoiceId: id,
+      oldStatus: invoice.status,
+      newStatus: status,
+    });
+  }
+
   res.json({
     success: true,
     data: { invoice: updatedInvoice },
@@ -211,7 +219,7 @@ export async function deleteInvoice(req: Request, res: Response): Promise<void> 
 
   const invoice = await prisma.invoice.findUnique({ where: { id } });
   if (!invoice) {
-    throw new NotFoundError("Invoice not found");
+    throw new NotFoundError("Invoice");
   }
 
   if (invoice.creatorId !== authReq.user.userId) {
