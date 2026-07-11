@@ -115,7 +115,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     resource: "User",
     resourceId: authReq.user.userId,
     description: `Profile updated: ${changedFields.join(", ")}`,
-    metadata: { changedFields },
+    metadata: { changedFields: changedFields.join(",") },
   });
 
   res.json({

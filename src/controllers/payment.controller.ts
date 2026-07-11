@@ -53,7 +53,7 @@ export async function createPayment(req: Request, res: Response): Promise<void> 
     resource: "Payment",
     resourceId: payment.id,
     description: `Payment created: ${amount} ${currency ?? "USDC"}, txHash: ${txHash}`,
-    metadata: { amount, currency, txHash, escrowId },
+    metadata: { amount, currency: currency ?? "USDC", txHash, escrowId: escrowId ?? "" },
   });
 
   res.status(201).json({
@@ -240,7 +240,7 @@ export async function handlePaymentWebhook(req: Request, res: Response): Promise
     resource: "Payment",
     resourceId: payment.id,
     description: `Payment webhook: status=${status}, confirmations=${confirmations ?? "N/A"}, ledger=${ledger ?? "N/A"}`,
-    metadata: { txHash, status, confirmations, ledger },
+    metadata: { txHash, status, confirmations: confirmations ?? 0, ledger: ledger ?? 0 },
   });
 
   const io = getIO();

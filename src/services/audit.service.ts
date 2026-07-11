@@ -8,9 +8,9 @@ export interface AuditLogEntry {
   resource?: string;
   resourceId?: string;
   description: string;
-  ipAddress?: string;
-  userAgent?: string;
-  metadata?: Record<string, unknown>;
+  ipAddress: string;
+  userAgent: string;
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 export function getClientIp(req: Request): string {
@@ -23,18 +23,28 @@ export function getClientIp(req: Request): string {
 
 export async function logAudit(entry: AuditLogEntry): Promise<void> {
   try {
-    await prisma.auditLog.create({
-      data: {
-        userId: entry.userId ?? null,
-        action: entry.action,
-        resource: entry.resource ?? null,
-        resourceId: entry.resourceId ?? null,
-        description: entry.description,
-        ipAddress: entry.ipAddress ?? null,
-        userAgent: entry.userAgent ?? null,
-        metadata: entry.metadata ?? undefined,
-      },
-    });
+    const data: {
+      userId: string | null;
+      action: AuditAction;
+      resource: string | null;
+      resourceId: string | null;
+      description: string;
+      ipAddress: string;
+      userAgent: string;
+      metadata?: Record<string, string | number | boolean | null>;
+    } = {
+      userId: entry.userId ?? null,
+      action: entry.action,
+      resource: entry.resource ?? null,
+      resourceId: entry.resourceId ?? null,
+      description: entry.description,
+      ipAddress: entry.ipAddress,
+      userAgent: entry.userAgent,
+    };
+    if (entry.metadata) {
+      data.metadata = entry.metadata;
+    }
+    await prisma.auditLog.create({ data });
   } catch (error) {
     console.error("Failed to write audit log:", error);
   }
@@ -47,7 +57,7 @@ export async function logAuditFromRequest(
   await logAudit({
     ...entry,
     ipAddress: getClientIp(req),
-    userAgent: req.headers["user-agent"] ?? null,
+    userAgent: req.headers["user-agent"] ?? "",
   });
 }
 

@@ -231,7 +231,7 @@ export async function updateInvoice(req: Request, res: Response): Promise<void> 
       resource: "Invoice",
       resourceId: id,
       description: `Invoice updated`,
-      metadata: { fields: Object.keys(req.body).filter((k) => req.body[k] !== undefined) },
+      metadata: { fields: Object.keys(req.body).filter((k) => req.body[k] !== undefined).join(",") },
     });
   }
 
