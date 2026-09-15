@@ -11,15 +11,18 @@ payment records keyed by Stellar transaction hash, Stellar wallet linking,
 notifications, dashboard analytics, and an audit log. Escrow funds themselves
 never touch this service — they live in the Soroban contract.
 
-> **⚠️ Status: pre-alpha, not deployable as-is.** The API is unaudited, has no
-> production deployment, and two open bugs currently prevent it from serving
-> any request: the Prisma 7 client is constructed without a driver adapter so
-> the process exits at startup ([#39](https://github.com/Steller-Flow/stellflow-backend/issues/39)),
-> and a global middleware assigns to Express 5's read-only `req.query` so every
-> request would 500 once it did boot ([#40](https://github.com/Steller-Flow/stellflow-backend/issues/40)).
-> On-chain verification is also stubbed ([#44](https://github.com/Steller-Flow/stellflow-backend/issues/44)).
-> The unit and controller test suite passes and CI is green because tests mock
-> the database and call controllers directly. See [Known issues](#known-issues).
+> **⚠️ Status: runs locally, unaudited, no production deployment.** The API
+> boots against a local Postgres and serves every documented route, and CI
+> runs typecheck, lint, tests and build on each push. It has had no security
+> review. On-chain verification is still a stub — the service records whatever
+> `txHash` / `contractId` a caller sends without checking Stellar
+> ([#44](https://github.com/Steller-Flow/stellflow-backend/issues/44)) — and
+> known authorization gaps are tracked in
+> [#41](https://github.com/Steller-Flow/stellflow-backend/issues/41),
+> [#42](https://github.com/Steller-Flow/stellflow-backend/issues/42),
+> [#43](https://github.com/Steller-Flow/stellflow-backend/issues/43) and
+> [#48](https://github.com/Steller-Flow/stellflow-backend/issues/48). Do not
+> point it at real user data or real funds yet. See [Known issues](#known-issues).
 
 ## API documentation (Swagger)
 
@@ -82,7 +85,7 @@ npx prisma generate
 ```
 
 No migration files are committed yet (`prisma/migrations/` does not exist —
-part of #39), so on a fresh database create the initial migration yourself:
+tracked in #52), so on a fresh database create the initial migration yourself:
 
 ```bash
 npx prisma migrate dev --name init   # creates prisma/migrations/ and applies it
@@ -272,28 +275,29 @@ Events the server emits from the controllers listed above:
 | `payment:confirmed` | payer | `POST /payments/verify`, `POST /payments/webhook` |
 | `notification:new`, `notification:read`, `notification:allRead` | target user | notification routes |
 
-Caveats, stated plainly: the emits are wired in code but have never been
-exercised end-to-end because the server does not currently boot (#39, #40);
-there are no tests for the socket layer; rooms are in-process memory, so this
-does not work across multiple instances; and there is no client library or
-event-payload documentation beyond the source. Treat this as a work-in-progress
-feature, not a shipped one.
+Caveats, stated plainly: the emits are wired in code but there are no tests
+for the socket layer and it has not been exercised with a real client; rooms
+are in-process memory, so this does not work across multiple instances; and
+there is no client library or event-payload documentation beyond the source.
+Treat this as a work-in-progress feature, not a shipped one.
 
 ## Running tests
 
 ```bash
-npm test             # vitest run — 9 files, 115 tests
+npm test             # vitest run — 11 files, 125 tests
 npm run test:watch
 npm run typecheck    # tsc --noEmit
 npm run lint         # eslint src/
 ```
 
 Tests live in `src/__tests__/`: `unit/` for config, errors, pagination,
-sanitize helpers and zod schemas; `integration/` for the auth, invoice and
-escrow controllers. `setup.ts` mocks the Prisma client and the Stellar
-service, so **no database is needed** and CI does not start one. Payment,
-notification, user, wallet, audit and analytics controllers have no tests
-yet (#49).
+sanitize helpers, zod schemas and Prisma client construction;
+`integration/` for the auth, invoice and escrow controllers, plus
+`http.test.ts`, which mounts the real app from `src/app.ts` on an ephemeral
+port and drives it with `fetch` through the full middleware chain.
+`setup.ts` mocks the Prisma client and the Stellar service, so **no
+database is needed** and CI does not start one. Payment, notification,
+user, wallet, audit and analytics controllers have no tests yet (#49).
 
 CI (`.github/workflows/ci.yml`) runs `npm ci`, `prisma generate`, typecheck,
 lint, test and build on every push and pull request to `main`.
@@ -343,7 +347,8 @@ The mapping between contract state and API state:
 
 ```
 src/
-├── index.ts              Express app, middleware order, route mounting, socket init
+├── index.ts              http.Server + socket.io bootstrap, listen()
+├── app.ts                Express app: middleware order and route mounting
 ├── config/               env (index.ts), Prisma client, swagger spec
 ├── routes/               one router per resource, with @openapi annotations
 ├── controllers/          request handlers
@@ -365,8 +370,7 @@ The ones that matter most before anyone relies on this service:
 
 | # | Area | Summary |
 |---|---|---|
-| [#39](https://github.com/Steller-Flow/stellflow-backend/issues/39) | startup | `new PrismaClient()` without an adapter — process exits; no migrations committed; no env validation |
-| [#40](https://github.com/Steller-Flow/stellflow-backend/issues/40) | startup | assignment to read-only `req.query` — every request 500s |
+| [#52](https://github.com/Steller-Flow/stellflow-backend/issues/52) | setup | no migrations committed; no startup validation of required env vars |
 | [#41](https://github.com/Steller-Flow/stellflow-backend/issues/41) | security | wallet signature never verified; `walletAddress` settable via profile/register |
 | [#42](https://github.com/Steller-Flow/stellflow-backend/issues/42) | security | invoice list scope can be overridden by query params |
 | [#43](https://github.com/Steller-Flow/stellflow-backend/issues/43) | security | payment webhook / verify lack ownership and authenticity checks |

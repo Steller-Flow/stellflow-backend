@@ -21,14 +21,12 @@ npx prisma generate
 npm test
 ```
 
-You should see 9 files / 115 tests pass. (Some `Failed to write audit log`
+You should see 11 files / 125 tests pass. (Some `Failed to write audit log`
 lines on stderr are expected until #49 lands — they are not failures.)
 
 To run the server itself, follow the [Setup](README.md#setup) section of the
 README: copy `.env.example` to `.env`, set `DATABASE_URL`, `JWT_SECRET` and
-`JWT_REFRESH_SECRET`, create the database, and `npm run dev`. Note that #39
-and #40 currently block the server from serving requests; if you are working
-on something else, verify through tests rather than `curl`.
+`JWT_REFRESH_SECRET`, create the database, and `npm run dev`.
 
 ## Workflow
 
@@ -69,6 +67,10 @@ that is already on `main`.
   `src/__tests__/integration/<resource>.test.ts`; middleware, services and
   utilities in `src/__tests__/unit/`. If the file for your resource doesn't
   exist yet, create it.
+- **Test through HTTP when the change touches routing or middleware.**
+  `src/__tests__/integration/http.test.ts` mounts the real app from
+  `src/app.ts` on an ephemeral port and uses `fetch`; add cases there for
+  anything that only shows up once a request goes through Express.
 - **Match the existing test style.** `src/__tests__/setup.ts` mocks
   `../config/prisma.js` and `../services/stellar.service.js` globally.
   Controller tests build a fake `req` (with `req.user` set for authenticated
