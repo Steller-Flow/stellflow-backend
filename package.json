@@ -2,8 +2,31 @@
   "name": "stellflow-backend",
   "version": "1.0.0",
   "type": "module",
-  "description": "StellFlow Backend API - Express 5 + Prisma + PostgreSQL",
+  "description": "StellFlow REST API — invoices, escrow tracking, USDC payment records and wallet linking for the StellFlow platform on Stellar (Express 5, Prisma 7, PostgreSQL)",
   "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Steller-Flow/stellflow-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Steller-Flow/stellflow-backend/issues"
+  },
+  "homepage": "https://github.com/Steller-Flow/stellflow-backend#readme",
+  "author": "StellFlow",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "usdc",
+    "escrow",
+    "payments",
+    "express",
+    "prisma",
+    "typescript"
+  ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
@@ -19,9 +42,6 @@
     "db:migrate": "bash scripts/db-migrate.sh",
     "db:deploy": "bash scripts/db-deploy.sh"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "~3.800.0",
     "@aws-sdk/s3-request-presigner": "~3.800.0",
