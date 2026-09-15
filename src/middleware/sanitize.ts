@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import sanitizeHtml from "sanitize-html";
+import { setRequestProperty } from "../utils/request.js";
 
 const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: [],
@@ -51,7 +52,7 @@ function sanitizeUrl(url: string): string {
 
 export function sanitizeBody(req: Request, _res: Response, next: NextFunction): void {
   if (req.body && typeof req.body === "object") {
-    req.body = sanitizeObject(req.body as Record<string, unknown>);
+    setRequestProperty(req, "body", sanitizeObject(req.body as Record<string, unknown>));
   }
   next();
 }
@@ -63,7 +64,7 @@ export function sanitizeQuery(req: Request, _res: Response, next: NextFunction):
       const sanitizedValue = sanitizeValue(value);
       sanitized[key] = typeof sanitizedValue === "string" ? sanitizedValue : String(sanitizedValue ?? "");
     }
-    req.query = sanitized;
+    setRequestProperty(req, "query", sanitized);
   }
   next();
 }
@@ -74,7 +75,7 @@ export function sanitizeParams(req: Request, _res: Response, next: NextFunction)
     for (const [key, value] of Object.entries(req.params)) {
       sanitized[key] = sanitizeValue(value);
     }
-    req.params = sanitized as Record<string, string>;
+    setRequestProperty(req, "params", sanitized);
   }
   next();
 }

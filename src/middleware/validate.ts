@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import type { ZodSchema } from "zod";
+import { setRequestProperty } from "../utils/request.js";
 
 export function validate(schema: ZodSchema, source: "body" | "query" | "params" = "body") {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -22,7 +23,7 @@ export function validate(schema: ZodSchema, source: "body" | "query" | "params" 
       });
       return;
     }
-    req[source] = result.data;
+    setRequestProperty(req, source, result.data);
     next();
   };
 }
