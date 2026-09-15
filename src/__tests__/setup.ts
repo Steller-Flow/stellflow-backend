@@ -29,6 +29,7 @@ vi.mock("../config/prisma.js", () => ({
     payment: {
       create: vi.fn(),
       findMany: vi.fn(),
+      count: vi.fn(),
     },
     notification: {
       create: vi.fn(),
